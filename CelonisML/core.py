@@ -7,6 +7,10 @@ from pycelonis.ems.studio.content_node.knowledge_model import KnowledgeModel
 from pycelonis.pql import PQL, PQLColumn
 from pycelonis.pql.data_frame import DataFrame as PQLDataFrame
 from pycelonis.pql.saola_connector import DataModelSaolaConnector, KnowledgeModelSaolaConnector, verify_columns
+from sklearn.base import BaseEstimator
+from sklearn.model_selection import train_test_split
+from utils import KPI
+from pandas import DataFrame, Series
 
 class CelonisML():
     """
@@ -14,6 +18,7 @@ class CelonisML():
     """
     def __init__(self, data_model:DataModel, knowledge_model:KnowledgeModel):
         self.data_extractor = DataExtractor()
+        self.model_trainer = ModelTrainer()
         self.data_model = data_model
         self.knowledge_model = knowledge_model
         self.data = None
@@ -42,10 +47,14 @@ class CelonisML():
         """
         self.data_extractor.set_saola_connector()
         self.data = self.data_extractor.extract_data(self.data_model, self.knowledge_model)
-        
+
+    def set_model(self, model:BaseEstimator):
+        self.model_trainer.model = model
 
 class DataExtractor():
-
+    """
+    Good explanation of the class
+    """
     def __init__(self):
         self.predictors = []
         self.target = None
@@ -86,15 +95,28 @@ class DataExtractor():
             return DataModelSaolaConnector
         else:
             return KnowledgeModelSaolaConnector
-        
-class KPI():
-    def __init__(self, id:str):
-        self.id = id
+
+class ModelTrainer():
+    """
+    Good explanation of the class
+    """
+    def __init__(self):
+        self.model = None
     
-    def __str__(self):
-        return f"KPI(id='{self.id}')"
+    def train_model(self, target:Series, predictors:DataFrame):
+        if not self.model:
+            raise ValueError('No model set. Call `.set_model(model) first')
+        
+        X_train, X_test, y_train, y_test = train_test_split(predictors, target)
 
-    def __repr__(self):
-        return self.__str__()
+        #TODO: error testing for fit method
+        self.model.fit(X_train, y_train)
+    
+    def evaluate_model(self):
+        ...
 
+    def predict(self, predictors:DataFrame)->Series:
+        return self.model.predict(predictors)
 
+class DataPusher():
+    ...
