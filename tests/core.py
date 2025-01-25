@@ -20,7 +20,7 @@ class TestCelonisML(unittest.TestCase):
         self.assertEqual(1, len(self.celonisml.data_extractor.predictors))
     
     def test_add_predictor_knowledge_model_kpi(self):
-        self.celonisml.add_predictor(KPI(id='kpi_id'))
+        self.celonisml.add_predictor(KPI(id_='kpi_id'))
         self.assertEqual(1, len(self.celonisml.data_extractor.predictors))
 
     def test_add_multiple_predictor_pql_column(self):
@@ -30,6 +30,22 @@ class TestCelonisML(unittest.TestCase):
     def test_add_predictor_failure(self):
         with self.assertRaises(TypeError):
             self.celonisml.add_predictor('"table"."attribute"')
+
+    def test_remove_predictor_pql_column(self):
+        self.celonisml.add_predictor(PQLColumn(name='attribute', query='"table"."attribute"'))
+        self.celonisml.remove_predictor(PQLColumn(name='attribute', query='"table"."attribute"'))
+        self.assertEqual(0, len(self.celonisml.data_extractor.predictors))
+    
+    def test_remove_predictor_knowledge_model_kpi(self):
+        self.celonisml.add_predictor(KPI(id_='kpi_id'))
+        self.celonisml.remove_predictor(KPI(id_='kpi_id'))
+        self.assertEqual(0, len(self.celonisml.data_extractor.predictors))
+    
+    def test_remove_predictor_knowledge_model_kpi_wrong_id(self):
+        self.celonisml.add_predictor(KPI(id_='kpi_id'))
+        self.celonisml.remove_predictor(KPI(id_='kpi_i'))
+        self.assertEqual(1, len(self.celonisml.data_extractor.predictors))
+
 
     def test_load_data_with_target(self):
         self.celonisml.data_extractor = Mock()
@@ -68,26 +84,26 @@ class TestDataExtractor(unittest.TestCase):
     def setUp(self):
         return super().setUp()
     
-    def test_set_saola_connector_dm_connector(self):
+    def test_requires_saola_connector_dm_connector(self):
         data_extractor = DataExtractor()
         data_extractor.predictors = [PQLColumn(name='col1', query='col2')]
         data_extractor.target = PQLColumn(name='col2', query='col2')        
         self.assertFalse(data_extractor.requires_knowledge_model_connector())
     
-    def test_set_saola_connector_dm_connector_target_is_none(self):
+    def test_requires_saola_connector_dm_connector_target_is_none(self):
         data_extractor = DataExtractor()
         data_extractor.predictors = [PQLColumn(name='col1', query='col2')]
         data_extractor.target = None
         self.assertFalse(data_extractor.requires_knowledge_model_connector())
     
-    def test_set_saola_connector_km_connector(self):
+    def test_requires_saola_connector_km_connector(self):
         data_extractor = DataExtractor()
         data_extractor.predictors = [PQLColumn(name='col1', query='col2'), KPI('kpi_id')]
         data_extractor.target = PQLColumn(name='col2', query='col2')
         self.assertTrue(data_extractor.requires_knowledge_model_connector())
 
         data_extractor.predictors = [PQLColumn(name='col1', query='col2')]
-        data_extractor.target = KPI(id='kpi_id')
+        data_extractor.target = KPI(id_='kpi_id')
         self.assertTrue(data_extractor.requires_knowledge_model_connector())
 
     def test_extract_pql_column_with_kpi(self):

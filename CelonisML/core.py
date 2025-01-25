@@ -34,6 +34,12 @@ class CelonisML():
                 raise TypeError('Predictor must be of type KPI or PQLColumn')
             self.data_extractor.predictors.append(predictor)
 
+    def remove_predictor(self, *predictors):
+        """
+        adds one or more predictors to the model
+        """
+        self.data_extractor.predictors = [predictor for predictor in self.data_extractor.predictors if predictor not in predictors]
+
     def add_target(self, target):
         """
         adds the target variable to the model for supervised
@@ -81,7 +87,6 @@ class CelonisML():
 
         return self.model_trainer.train_and_evaluate(preditors, target)
         
-        
 class DataExtractor():
     """
     Good explanation of the class
@@ -116,7 +121,7 @@ class DataExtractor():
         if isinstance(column, PQLColumn):
             return column
         elif isinstance(column, KPI):
-            kpi = knowledge_model.get_kpi(column.id)
+            kpi = knowledge_model.get_kpi(column.id_)
             return PQLColumn(name=kpi.display_name, query=kpi.pql)
         else:
             raise TypeError(f'column {column} is not of type PQLColumn or KPI')
