@@ -107,6 +107,7 @@ class DataExtractor():
         if self.target:
             query += self.extract_pql_column(knowledge_model, self.target)
         
+        #TODO: maybe if knowledge model is passed then set KMSaola other wise DMSaola
         if self.requires_knowledge_model_connector():
             return PQLDataFrame.from_pql(query, 
             saola_connector=KnowledgeModelSaolaConnector(data_model=data_model, knowledge_model=knowledge_model)).to_pandas() 
@@ -173,4 +174,9 @@ class ModelTrainer():
         return self.model.predict(predictors)
 
 class DataPusher():
-    ...
+    
+    def __init__():
+        pass
+
+    def upload_data(self, data:DataFrame):
+        pass
