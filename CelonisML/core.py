@@ -67,7 +67,15 @@ class CelonisML():
         self.model_trainer.set_model(model)
 
     def train_model(self):
-        #TODO:handle target is Null
+        """
+        trains the model and 
+        """
+        if self.data is None:
+            raise ValueError('Data is `None`. Ensure you have extracted data from Celonis before training the model')
+        
+        if self.target_column is None:
+            score = self.model_trainer.train_and_evaluate(self.data)
+
         target = self.data[self.target_column]
         preditors = self.data.drop(columns=[self.target_column])
         
@@ -149,11 +157,11 @@ class ModelTrainer():
                 raise ValueError(f'{self.model} requires a target to be added')    
             X_train, X_test, y_test, y_train = train_test_split(X, y)
             self.model.fit(X_train, y_train)
-            return self.scoring_func(y_test, X_test)
+            return self.scoring_func(y_test, self.model.predict(X_test))
         else:
             X_train, X_test = train_test_split(X)
             self.model.fit(X_train)
-            return self.scoring_func(y_test, X_test)
+            return self.scoring_func(X_test)
 
     def predict(self, predictors:DataFrame)->Series:
         return self.model.predict(predictors)

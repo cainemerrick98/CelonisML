@@ -50,8 +50,6 @@ class TestCelonisML(unittest.TestCase):
             mock = Mock()
             self.celonisml.add_model(mock)
 
-    
-
 class TestDataExtractor(unittest.TestCase):
     
     def setUp(self):
@@ -85,5 +83,11 @@ class TestDataExtractor(unittest.TestCase):
         self.assertEqual(result.name, 'kpi')
         self.assertEqual(result.query, 'pql_query')
         
-
+class TestModelTrainer(unittest.TestCase):
+    
+    def setUp(self):
+        return super().setUp()
+    
+    def test_reminder(self):
+        raise MemoryError('You need to test this class')
         
