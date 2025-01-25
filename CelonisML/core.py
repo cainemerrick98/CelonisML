@@ -3,14 +3,15 @@ Core data classes are data extraction, model trainer and data upload
 """
 from pycelonis.ems.data_integration.data_model import DataModel
 from pycelonis.ems.studio.content_node.knowledge_model import KnowledgeModel
-# from pycelonis.ems.studio.content_node.knowledge_model.kpi import Kpi
 from pycelonis.pql import PQL, PQLColumn
 from pycelonis.pql.data_frame import DataFrame as PQLDataFrame
-from pycelonis.pql.saola_connector import DataModelSaolaConnector, KnowledgeModelSaolaConnector, verify_columns
+from pycelonis.pql.saola_connector import DataModelSaolaConnector, KnowledgeModelSaolaConnector
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import train_test_split
-from utils import KPI
+from sklearn.metrics import accuracy_score, mean_squared_error, silhouette_score
+from .utils import KPI
 from pandas import DataFrame, Series
+
 
 class CelonisML():
     """
@@ -22,15 +23,16 @@ class CelonisML():
         self.data_model = data_model
         self.knowledge_model = knowledge_model
         self.data = None
+        self.target_column = None
 
-    def add_predictor(self, predictor):
+    def add_predictor(self, *predictors):
         """
-        adds a predictor variable to the model
+        adds one or more predictors to the model
         """
-        #TODO unpack predictors
-        if not isinstance(predictor, (KPI, PQLColumn)):
-            raise TypeError('Predictor must be a knowledge model KPI or a PQL column')
-        self.data_extractor.predictors.append(predictor)
+        for predictor in predictors:
+            if not isinstance(predictor, (KPI, PQLColumn)):
+                raise TypeError('Predictor must be of type KPI or PQLColumn')
+            self.data_extractor.predictors.append(predictor)
 
     def add_target(self, target):
         """
@@ -38,18 +40,38 @@ class CelonisML():
         learning tasks.
         """
         if not isinstance(target, (KPI, PQLColumn)):
-            raise TypeError('Target must be a knowledge model KPI or a PQL column')
+            raise TypeError('Target must be of type KPI or PQLColumn')
         self.data_extractor.target = target
     
     def load_data(self):
         """
-        runs the pql query to extract the data for current set of predictors and target
+        runs the pql query to extract the data for current dataset of predictors and target
         """
-        self.data_extractor.set_saola_connector()
+        if self.data_extractor.target:
+            self.target_column = self.data_extractor.extract_pql_column(self.knowledge_model, self.data_extractor.target).name
+
         self.data = self.data_extractor.extract_data(self.data_model, self.knowledge_model)
 
-    def set_model(self, model:BaseEstimator):
-        self.model_trainer.model = model
+    def add_model(self, model:BaseEstimator):
+        if not isinstance(model, BaseEstimator):
+            raise TypeError('Model must be an instance of BaseEstimatior')
+
+        for method in ['fit', 'predict']:
+            if not hasattr(model, method):
+                raise TypeError('Model must be implement a `fit` and `predict` method')
+
+        if not hasattr(model, '_estimator_type'):
+            raise TypeError('Model must have an `_estimator_type` attribute')
+
+
+        self.model_trainer.set_model(model)
+
+    def train_model(self):
+        #TODO:handle target is Null
+        target = self.data[self.target_column]
+        preditors = self.data.drop(columns=[self.target_column])
+        
+
 
 class DataExtractor():
     """
@@ -58,7 +80,6 @@ class DataExtractor():
     def __init__(self):
         self.predictors = []
         self.target = None
-        self.saola_connector = None
 
     def extract_data(self, data_model:DataModel, knowledge_model:KnowledgeModel):
         """
@@ -72,7 +93,12 @@ class DataExtractor():
         if self.target:
             query += self.extract_pql_column(knowledge_model, self.target)
         
-        return PQLDataFrame.from_pql(query, saolaconnector=self.saola_connector).to_pandas() 
+        if self.requires_knowledge_model_connector():
+            return PQLDataFrame.from_pql(query, 
+            saolaconnector=KnowledgeModelSaolaConnector(data_model=data_model, knowledge_model=knowledge_model)).to_pandas() 
+        else:
+            return PQLDataFrame.from_pql(query, 
+            saolaconnector=DataModelSaolaConnector(data_model=data_model)).to_pandas() 
 
     def extract_pql_column(self, knowledge_model, column):
         """
@@ -84,17 +110,17 @@ class DataExtractor():
             kpi = knowledge_model.get_kpi(column.id)
             return PQLColumn(name=kpi.display_name, query=kpi.pql)
         else:
-            raise TypeError('predictor should be of type PQLColumn or KPI')#TODO:set a limit here?
-    
-    def set_saola_connector(self):
+            raise TypeError(f'column {column} is not of type PQLColumn or KPI')
+
+    def requires_knowledge_model_connector(self):
         """
-        sets the correct saoloa connector given the set of predictors and the target
+        checks if the `KnowledgeModelSaolaConnector` is required
         """
         columns = self.predictors + [self.target]
         if all(map(lambda x: isinstance(x, PQLColumn), columns)):
-            return DataModelSaolaConnector
+            return False
         else:
-            return KnowledgeModelSaolaConnector
+            return True
 
 class ModelTrainer():
     """
@@ -102,18 +128,32 @@ class ModelTrainer():
     """
     def __init__(self):
         self.model = None
-    
-    def train_model(self, target:Series, predictors:DataFrame):
+        self.scoring_func = None
+
+    def set_model(self, model):
+        self.model = model
+        if self.model._estimator_type == 'regressor':
+            self.scoring_func = mean_squared_error
+        elif self.model._estimator_type == 'classifier':
+            self.scoring_func = accuracy_score
+        else:
+            self.scoring_func = silhouette_score
+
+
+    def train_and_evaluate(self, X:DataFrame, y:Series=None):
         if not self.model:
             raise ValueError('No model set. Call `.set_model(model) first')
         
-        X_train, X_test, y_train, y_test = train_test_split(predictors, target)
-
-        #TODO: error testing for fit method
-        self.model.fit(X_train, y_train)
-    
-    def evaluate_model(self):
-        ...
+        if self.model._estimator_type in ['regressor', 'classifier']:
+            if y is None:
+                raise ValueError(f'{self.model} requires a target to be added')    
+            X_train, X_test, y_test, y_train = train_test_split(X, y)
+            self.model.fit(X_train, y_train)
+            return self.scoring_func(y_test, X_test)
+        else:
+            X_train, X_test = train_test_split(X)
+            self.model.fit(X_train)
+            return self.scoring_func(y_test, X_test)
 
     def predict(self, predictors:DataFrame)->Series:
         return self.model.predict(predictors)

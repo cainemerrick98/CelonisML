@@ -1,7 +1,6 @@
 class KPI():
     """
-    represents a knowledge model KPI.
-    for users to add as predictors or targets
+    represents a knowledge model KPI for users to add as predictors or targets
     """
     def __init__(self, id:str):
         self.id = id
@@ -11,3 +10,4 @@ class KPI():
 
     def __repr__(self):
         return self.__str__()
+    
