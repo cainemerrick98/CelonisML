@@ -155,15 +155,16 @@ class ModelTrainer():
         if self.model._estimator_type in ['regressor', 'classifier']:
             if y is None:
                 raise ValueError(f'{self.model} requires a target to be added')    
-            X_train, X_test, y_test, y_train = train_test_split(X, y)
+            X_train, X_test, y_train, y_test = train_test_split(X, y)
             self.model.fit(X_train, y_train)
             return self.scoring_func(y_test, self.model.predict(X_test))
         else:
             X_train, X_test = train_test_split(X)
             self.model.fit(X_train)
-            return self.scoring_func(X_test)
+            return self.scoring_func(X_test, self.model.predict(X_test))
 
     def predict(self, predictors:DataFrame)->Series:
+        #TODO: assert model has been fit
         return self.model.predict(predictors)
 
 class DataPusher():
