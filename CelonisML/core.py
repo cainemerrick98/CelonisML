@@ -74,13 +74,14 @@ class CelonisML():
             raise ValueError('Data is `None`. Ensure you have extracted data from Celonis before training the model')
         
         if self.target_column is None:
-            score = self.model_trainer.train_and_evaluate(self.data)
+            return self.model_trainer.train_and_evaluate(self.data)
 
-        target = self.data[self.target_column]
         preditors = self.data.drop(columns=[self.target_column])
+        target = self.data[self.target_column]
+
+        return self.model_trainer.train_and_evaluate(preditors, target)
         
-
-
+        
 class DataExtractor():
     """
     Good explanation of the class
@@ -103,10 +104,10 @@ class DataExtractor():
         
         if self.requires_knowledge_model_connector():
             return PQLDataFrame.from_pql(query, 
-            saolaconnector=KnowledgeModelSaolaConnector(data_model=data_model, knowledge_model=knowledge_model)).to_pandas() 
+            saola_connector=KnowledgeModelSaolaConnector(data_model=data_model, knowledge_model=knowledge_model)).to_pandas() 
         else:
             return PQLDataFrame.from_pql(query, 
-            saolaconnector=DataModelSaolaConnector(data_model=data_model)).to_pandas() 
+            saola_connector=DataModelSaolaConnector(data_model=data_model)).to_pandas() 
 
     def extract_pql_column(self, knowledge_model, column):
         """
@@ -125,7 +126,7 @@ class DataExtractor():
         checks if the `KnowledgeModelSaolaConnector` is required
         """
         columns = self.predictors + [self.target]
-        if all(map(lambda x: isinstance(x, PQLColumn), columns)):
+        if all(map(lambda x: isinstance(x, PQLColumn) or x is None , columns)):
             return False
         else:
             return True
@@ -146,7 +147,6 @@ class ModelTrainer():
             self.scoring_func = accuracy_score
         else:
             self.scoring_func = silhouette_score
-
 
     def train_and_evaluate(self, X:DataFrame, y:Series=None):
         if not self.model:

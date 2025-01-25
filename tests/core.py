@@ -51,6 +51,18 @@ class TestCelonisML(unittest.TestCase):
             mock = Mock()
             self.celonisml.add_model(mock)
 
+    def test_train_model(self):
+        self.celonisml.data = DataFrame({
+            'Col1':np.random.normal(0, 1, 100),
+            'Col2':np.random.normal(-2, 2, 100)
+        })
+        self.celonisml.data['Target'] = 3 * self.celonisml.data['Col1'] + 2 * self.celonisml.data['Col2'] + np.random.normal(0, 1, 100)
+        self.celonisml.target_column = 'Target'
+        self.celonisml.add_model(LinearRegression())
+
+        score = self.celonisml.train_model()
+        self.assertIsInstance(score, float)
+
 class TestDataExtractor(unittest.TestCase):
     
     def setUp(self):
@@ -60,6 +72,12 @@ class TestDataExtractor(unittest.TestCase):
         data_extractor = DataExtractor()
         data_extractor.predictors = [PQLColumn(name='col1', query='col2')]
         data_extractor.target = PQLColumn(name='col2', query='col2')        
+        self.assertFalse(data_extractor.requires_knowledge_model_connector())
+    
+    def test_set_saola_connector_dm_connector_target_is_none(self):
+        data_extractor = DataExtractor()
+        data_extractor.predictors = [PQLColumn(name='col1', query='col2')]
+        data_extractor.target = None
         self.assertFalse(data_extractor.requires_knowledge_model_connector())
     
     def test_set_saola_connector_km_connector(self):
