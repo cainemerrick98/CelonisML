@@ -2,6 +2,7 @@
 Core data classes are data extraction, model trainer and data upload
 """
 from pycelonis.ems.data_integration.data_model import DataModel
+from pycelonis.ems.data_integration.data_pool import DataPool
 from pycelonis.ems.studio.content_node.knowledge_model import KnowledgeModel
 from pycelonis.pql import PQL, PQLColumn
 from pycelonis.pql.data_frame import DataFrame as PQLDataFrame
@@ -178,5 +179,12 @@ class DataPusher():
     def __init__():
         pass
 
-    def upload_data(self, data:DataFrame):
-        pass
+    def upload_data(self, data:DataFrame, data_pool:DataPool, name:str):
+        """
+        simply adds the dataframe to the data pool
+        """
+        data_pool.create_table(
+            df=data,
+            table_name=name,
+            drop_if_exists=True
+        )
