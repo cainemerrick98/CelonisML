@@ -50,6 +50,7 @@ class CelonisML():
             raise TypeError('Target must be of type KPI or PQLColumn')
         self.data_extractor.target = target
     
+    #TODO: is this necessary?
     def load_data(self):
         """
         runs the pql query to extract the data for current dataset of predictors and target
@@ -173,6 +174,21 @@ class ModelTrainer():
     def predict(self, predictors:DataFrame)->Series:
         #TODO: assert model has been fit
         return self.model.predict(predictors)
+
+class FeatureEngineer():
+    """
+    Handles automated feature engineering
+    """
+    def __init__(self):
+        self.numeric_features = []
+        self.categorical_features = []
+        self.datetime_features = []
+
+    def identify_column_types(self):
+        pass
+
+    def build_preprocessor(self):
+        pass
 
 class DataPusher():
     
